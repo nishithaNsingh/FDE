@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rapido Complaint Triage — Proof of Concept</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #14120F;
+    --cream: #FAF8F3;
+    --yellow: #FFC72C;
+    --yellow-deep: #E6A800;
+    --line: #E7E2D6;
+    --risk-high: #D8432C;
+    --risk-mid: #E6A800;
+    --risk-low: #2E8B57;
+    --panel: #FFFFFF;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--cream);
+    color: var(--black);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header {
+    padding: 28px 40px 20px;
+    border-bottom: 3px solid var(--black);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .brand-mark {
+    background: var(--black);
+    color: var(--yellow);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 5px 10px;
+    letter-spacing: 0.02em;
+  }
+
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: #6B6459;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  main {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 40px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 36px;
+  }
+
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; padding: 24px; }
+    header { padding: 20px; }
+  }
+
+  .panel-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #A39C8C;
+    margin-bottom: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 160px;
+    padding: 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    border: 2px solid var(--black);
+    border-radius: 0;
+    background: var(--panel);
+    resize: vertical;
+    line-height: 1.5;
+  }
+
+  textarea:focus {
+    outline: 3px solid var(--yellow);
+    outline-offset: -1px;
+  }
+
+  .samples {
+    margin-top: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .sample-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    background: none;
+    border: 1.5px solid var(--black);
+    padding: 7px 12px;
+    cursor: pointer;
+    color: var(--black);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .sample-chip:hover { background: var(--black); color: var(--yellow); }
+
+  .run-btn {
+    margin-top: 20px;
+    width: 100%;
+    padding: 15px;
+    background: var(--black);
+    color: var(--yellow);
+    border: none;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+  }
+
+  .run-btn:hover { background: #2A2620; }
+  .run-btn:disabled { opacity: 0.5; cursor: wait; }
+
+  .result-panel {
+    border: 2px solid var(--black);
+    background: var(--panel);
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ticket-empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #B4AC9C;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    text-align: center;
+    padding: 40px;
+    line-height: 1.6;
+  }
+
+  .ticket {
+    display: none;
+    animation: rise 0.35s ease forwards;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .ticket.show { display: block; }
+
+  .ticket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 20px;
+    border-bottom: 2px solid var(--black);
+  }
+
+  .category-tag {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  .queue-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 5px 10px;
+    border: 1.5px solid var(--black);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .risk-section {
+    padding: 20px;
+    border-bottom: 2px solid var(--line);
+  }
+
+  .risk-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #6B6459;
+    margin-bottom: 8px;
+  }
+
+  .risk-score {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--black);
+  }
+
+  .risk-bar-track {
+    height: 10px;
+    background: var(--line);
+    width: 100%;
+    position: relative;
+  }
+
+  .risk-bar-fill {
+    height: 100%;
+    width: 0%;
+    transition: width 0.5s ease;
+  }
+
+  .risk-reason {
+    margin-top: 10px;
+    font-size: 13.5px;
+    color: #4A443B;
+    line-height: 1.5;
+  }
+
+  .response-section {
+    padding: 20px;
+    flex: 1;
+  }
+
+  .response-box {
+    margin-top: 10px;
+    background: var(--cream);
+    border: 1.5px solid var(--line);
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #2A2620;
+  }
+
+  .error-box {
+    display: none;
+    margin: 20px;
+    padding: 14px 16px;
+    border: 2px solid var(--risk-high);
+    background: #FBEAE6;
+    font-size: 13.5px;
+    color: #7A2A1D;
+  }
+
+  footer {
+    text-align: center;
+    padding: 30px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: #A39C8C;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">rapido</div>
+    <div>
+      <h1>Complaint Triage — Proof of Concept</h1>
+      <div class="subtitle">why this exists: unresolved complaints currently escalate on social media, not in the queue</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div>
+    <div class="panel-label">01 — paste a complaint</div>
+    <textarea id="complaintInput" placeholder="Paste a rider or captain complaint here, or try one of the real examples below..."></textarea>
+
+    <div class="samples" id="samples"></div>
+
+    <button class="run-btn" id="runBtn">Triage this complaint →</button>
+  </div>
+
+  <div>
+    <div class="panel-label">02 — triage result</div>
+    <div class="result-panel">
+      <div class="error-box" id="errorBox"></div>
+      <div class="ticket-empty" id="emptyState">
+        Result appears here.<br>Try a sample on the left, or paste a real complaint.
+      </div>
+      <div class="ticket" id="ticket">
+        <div class="ticket-header">
+          <div class="category-tag" id="categoryTag">—</div>
+          <div class="queue-badge" id="queueBadge">—</div>
+        </div>
+        <div class="risk-section">
+          <div class="risk-label-row">
+            <span>Escalation risk</span>
+            <span class="risk-score"><span id="riskScore">0</span>/10</span>
+          </div>
+          <div class="risk-bar-track">
+            <div class="risk-bar-fill" id="riskBar"></div>
+          </div>
+          <div class="risk-reason" id="riskReason"></div>
+        </div>
+        <div class="response-section">
+          <div class="panel-label" style="margin-bottom:0;">Auto-drafted first response</div>
+          <div class="response-box" id="responseBox"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>built as a proof of concept for the Forward Deployed AI Engineer role · not affiliated with Rapido's production systems</footer>
+
+<script>
+const samples = [
+  "Driver stopped the auto on an empty service road and claimed the AC was broken, insisting I get out and let him take it to a garage. It felt unsafe and I had to book another ride immediately.",
+  "I handed the driver 500 rupees cash and he promised to send back the balance via UPI. He only sent 130 back when he owed me 330. This was a clear scam.",
+  "My package was supposed to be delivered an hour ago and the delivery partner isn't answering calls. I've tried the in-app help option three times with no response from any agent.",
+  "App keeps logging me out mid-booking and I've missed two rides because of it this week. Really frustrating but not urgent.",
+];
+
+const samplesEl = document.getElementById('samples');
+samples.forEach((text, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'sample-chip';
+  btn.textContent = 'Sample ' + (i + 1);
+  btn.onclick = () => { document.getElementById('complaintInput').value = text; };
+  samplesEl.appendChild(btn);
+});
+
+function riskColor(score) {
+  if (score >= 7) return getComputedStyle(document.documentElement).getPropertyValue('--risk-high');
+  if (score >= 4) return getComputedStyle(document.documentElement).getPropertyValue('--risk-mid');
+  return getComputedStyle(document.documentElement).getPropertyValue('--risk-low');
+}
+
+document.getElementById('runBtn').addEventListener('click', async () => {
+  const input = document.getElementById('complaintInput').value.trim();
+  const errorBox = document.getElementById('errorBox');
+  const emptyState = document.getElementById('emptyState');
+  const ticket = document.getElementById('ticket');
+  const runBtn = document.getElementById('runBtn');
+
+  errorBox.style.display = 'none';
+  if (!input) {
+    errorBox.textContent = 'Paste a complaint first, or click a sample.';
+    errorBox.style.display = 'block';
+    return;
+  }
+
+  runBtn.disabled = true;
+  runBtn.textContent = 'Triaging…';
+  ticket.classList.remove('show');
+  emptyState.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/classify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ complaint: input })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Something went wrong.');
+    }
+
+    document.getElementById('categoryTag').textContent = data.category;
+    document.getElementById('queueBadge').textContent = data.recommended_queue;
+    document.getElementById('riskScore').textContent = data.escalation_risk;
+    document.getElementById('riskReason').textContent = data.risk_reason;
+    document.getElementById('responseBox').textContent = data.draft_response;
+
+    const bar = document.getElementById('riskBar');
+    bar.style.width = (data.escalation_risk * 10) + '%';
+    bar.style.background = riskColor(data.escalation_risk);
+
+    ticket.classList.add('show');
+  } catch (err) {
+    errorBox.textContent = err.message;
+    errorBox.style.display = 'block';
+    emptyState.style.display = 'flex';
+  } finally {
+    runBtn.disabled = false;
+    runBtn.textContent = 'Triage this complaint →';
+  }
+});
+</script>
+
+</body>
+</html>
